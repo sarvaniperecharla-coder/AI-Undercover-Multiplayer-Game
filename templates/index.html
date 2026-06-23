@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Undercover Game</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg:           #060918;
+            --bg-card:      rgba(11, 17, 36, 0.88);
+            --bg-elevated:  rgba(22, 32, 60, 0.75);
+            --purple:       #8B5CF6;
+            --purple-dark:  #6D28D9;
+            --purple-deep:  #4C1D95;
+            --cyan:         #22D3EE;
+            --cyan-dark:    #0891B2;
+            --amber:        #F59E0B;
+            --green:        #10B981;
+            --red:          #EF4444;
+            --red-dark:     #B91C1C;
+            --border:       rgba(139, 92, 246, 0.18);
+            --border-hover: rgba(139, 92, 246, 0.42);
+            --text-1:       #F1F5F9;
+            --text-2:       #94A3B8;
+            --text-3:       #3F4F6E;
+            --radius:       20px;
+            --radius-sm:    11px;
+            --radius-pill:  50px;
+            --shadow-card:  0 8px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(139, 92, 246, 0.08);
+            --shadow-btn:   0 4px 20px rgba(109, 40, 217, 0.45);
+            --shadow-cyan:  0 4px 20px rgba(34, 211, 238, 0.35);
+            --shadow-red:   0 4px 16px rgba(239, 68, 68, 0.4);
+        }
+
+        /* ─── Base ─── */
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text-1);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ─── Background atmosphere ─── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 65% 52% at 12% 18%, rgba(109, 40, 217, 0.22) 0%, transparent 55%),
+                radial-gradient(ellipse 55% 55% at 88% 82%, rgba(8, 145, 178, 0.16) 0%, transparent 55%),
+                radial-gradient(ellipse 45% 40% at 55% 45%, rgba(139, 92, 246, 0.07) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ─── Floating ambient orbs ─── */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(90px);
+            pointer-events: none;
+            z-index: 0;
+            will-change: transform;
+        }
+
+        .orb-1 {
+            width: 420px; height: 420px;
+            background: rgba(109, 40, 217, 0.14);
+            top: -120px; left: -120px;
+            animation: float-1 18s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            width: 320px; height: 320px;
+            background: rgba(34, 211, 238, 0.09);
+            bottom: 5%; right: -60px;
+            animation: float-2 22s ease-in-out infinite;
+        }
+
+        .orb-3 {
+            width: 260px; height: 260px;
+            background: rgba(245, 158, 11, 0.06);
+            top: 45%; left: 45%;
+            animation: float-3 28s ease-in-out infinite;
+        }
+
+        @keyframes float-1 {
+            0%, 100% { transform: translate(0,   0  ) scale(1);    }
+            40%       { transform: translate(40px,-30px) scale(1.07); }
+            70%       { transform: translate(-20px,25px) scale(0.95); }
+        }
+
+        @keyframes float-2 {
+            0%, 100% { transform: translate(0,   0  ) scale(1);    }
+            35%       { transform: translate(-35px,20px) scale(1.05); }
+            70%       { transform: translate(20px,-30px) scale(0.95); }
+        }
+
+        @keyframes float-3 {
+            0%, 100% { transform: translate(0,  0 ) scale(1);    }
+            50%       { transform: translate(25px,35px) scale(1.1);  }
+        }
+
+        /* ─── Layout wrapper ─── */
+        .game-wrapper {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 0 16px 80px;
+        }
+
+        /* ─── Header ─── */
+        .game-header {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 22px 20px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.12);
+            margin-bottom: 28px;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+
+        .logo-icon {
+            font-size: 1.8rem;
+            filter: drop-shadow(0 0 12px rgba(139, 92, 246, 0.5));
+        }
+
+        .header-logo h1 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            background: linear-gradient(135deg, var(--purple) 20%, var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        /* roundDisplay — kept as-is, styled via ID */
+        #roundDisplay {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--cyan);
+            background: rgba(34, 211, 238, 0.09);
+            border: 1px solid rgba(34, 211, 238, 0.28);
+            padding: 4px 14px;
+            border-radius: var(--radius-pill);
+        }
+
+        /* roomCode — kept as-is, styled via ID */
+        #roomCode {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            color: var(--text-2);
+            text-transform: uppercase;
+        }
+
+        #roomCode:empty { display: none; }
+
+        /* ─── Cards ─── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 26px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-hover);
+            box-shadow: 0 10px 50px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.18);
+        }
+
+        /* Card header row */
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 22px;
+        }
+
+        .card-icon {
+            font-size: 1.25rem;
+        }
+
+        .card-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-1);
+        }
+
+        /* ─── Inputs ─── */
+        label.input-label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.13em;
+            text-transform: uppercase;
+            color: var(--text-2);
+            margin-bottom: 7px;
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+        }
+
+        /* shared class for all text inputs */
+        .game-input {
+            display: block;
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: var(--radius-sm);
+            color: var(--text-1);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.92rem;
+            outline: none;
+            transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+        }
+
+        .game-input::placeholder { color: var(--text-3); }
+
+        .game-input:focus {
+            border-color: var(--purple);
+            background: rgba(139, 92, 246, 0.07);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14);
+        }
+
+        .game-input:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+        }
+
+        /* ─── Buttons ─── */
+        .btn {
+            padding: 11px 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.98rem;
+            font-weight: 700;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.25s ease;
+            white-space: nowrap;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.09);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover:not(:disabled)::after { opacity: 1; }
+        .btn:active:not(:disabled)       { transform: scale(0.97); }
+
+        .btn:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+        }
+
+        /* Primary — purple gradient */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--purple-dark), var(--purple));
+            color: #fff;
+            box-shadow: var(--shadow-btn);
+            width: 100%;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: 0 6px 30px rgba(109, 40, 217, 0.65);
+            transform: translateY(-1px);
+        }
+
+        /* Secondary — purple outline */
+        .btn-secondary {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--purple);
+            border: 1px solid rgba(139, 92, 246, 0.38);
+            flex-shrink: 0;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: var(--purple);
+        }
+
+        /* Accent — cyan gradient */
+        .btn-accent {
+            background: linear-gradient(135deg, var(--cyan-dark), var(--cyan));
+            color: #03111a;
+            font-weight: 700;
+            box-shadow: var(--shadow-cyan);
+            flex-shrink: 0;
+        }
+
+        .btn-accent:hover:not(:disabled) {
+            box-shadow: 0 6px 26px rgba(34, 211, 238, 0.55);
+            transform: translateY(-1px);
+        }
+
+        /* Start — large pulsing CTA */
+        .btn-start {
+            background: linear-gradient(135deg, var(--purple-deep), var(--purple-dark), var(--purple));
+            color: #fff;
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            letter-spacing: 0.14em;
+            box-shadow: 0 6px 32px rgba(109, 40, 217, 0.55);
+            margin-top: 22px;
+            animation: pulse-btn 3s ease-in-out infinite;
+        }
+
+        .btn-start:hover:not(:disabled) {
+            box-shadow: 0 8px 44px rgba(139, 92, 246, 0.75);
+            transform: translateY(-2px);
+            animation: none;
+        }
+
+        @keyframes pulse-btn {
+            0%,100% { box-shadow: 0 6px 32px rgba(109,40,217,0.55); }
+            50%      { box-shadow: 0 6px 42px rgba(139,92,246,0.82); }
+        }
+
+        /* Danger — red gradient */
+        .btn-danger {
+            background: linear-gradient(135deg, var(--red-dark), var(--red));
+            color: #fff;
+            box-shadow: var(--shadow-red);
+            flex-shrink: 0;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            box-shadow: 0 6px 26px rgba(239, 68, 68, 0.6);
+            transform: translateY(-1px);
+        }
+
+        /* ─── Lobby ─── */
+        .lobby-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .divider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .divider-row::before,
+        .divider-row::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(139, 92, 246, 0.15);
+        }
+
+        .divider-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-3);
+        }
+
+        .join-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .join-row .game-input { flex: 1; }
+
+        /* ─── Players list ─── */
+        #players {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+            min-height: 20px;
+        }
+
+        #players:empty::after {
+            content: 'Waiting for agents to join…';
+            color: var(--text-3);
+            font-size: 0.875rem;
+            font-style: italic;
+        }
+
+        #players li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-pill);
+            padding: 7px 18px;
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--text-1);
+            transition: border-color 0.2s;
+        }
+
+        #players li::before {
+            content: '';
+            display: inline-block;
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 6px var(--green);
+            flex-shrink: 0;
+        }
+
+        /* ─── Role + Word reveal grid ─── */
+        .reveal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .reveal-card {
+            text-align: center;
+            padding: 30px 20px;
+            margin-bottom: 0;
+        }
+
+        /* Gradient-border trick */
+        .role-reveal {
+            background:
+                linear-gradient(rgba(12,17,34,0.9), rgba(12,17,34,0.9)) padding-box,
+                linear-gradient(135deg, rgba(109,40,217,0.6), rgba(139,92,246,0.2)) border-box;
+            border: 1px solid transparent;
+        }
+
+        .word-reveal {
+            background:
+                linear-gradient(rgba(12,17,34,0.9), rgba(12,17,34,0.9)) padding-box,
+                linear-gradient(135deg, rgba(8,145,178,0.6), rgba(34,211,238,0.2)) border-box;
+            border: 1px solid transparent;
+        }
+
+        .reveal-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--text-3);
+            margin-bottom: 10px;
+        }
+
+        /* role h2 — ID preserved */
+        #role {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: clamp(1.05rem, 3vw, 1.5rem);
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: var(--purple);
+            min-height: 28px;
+            text-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+        }
+
+        /* word h2 — ID preserved */
+        #word {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: clamp(1.05rem, 3vw, 1.5rem);
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: var(--cyan);
+            min-height: 28px;
+            text-shadow: 0 0 20px rgba(34, 211, 238, 0.35);
+        }
+
+        /* ─── Input + action row (clue / chat / mr white) ─── */
+        .input-action-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-action-row .game-input { flex: 1; }
+
+        /* ─── Clues ─── */
+        .clues-divider {
+            border: none;
+            border-top: 1px solid rgba(139, 92, 246, 0.1);
+            margin: 20px 0 16px;
+        }
+
+        .subsection-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--text-3);
+            margin-bottom: 12px;
+        }
+
+        /* clues ul — ID preserved */
+        #clues {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 220px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(139,92,246,0.25) transparent;
+        }
+
+        #clues::-webkit-scrollbar       { width: 3px; }
+        #clues::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 2px; }
+
+        #clues li {
+            background: rgba(139, 92, 246, 0.055);
+            border: 1px solid rgba(139, 92, 246, 0.13);
+            border-radius: 9px;
+            padding: 10px 14px;
+            font-size: 0.88rem;
+            color: var(--text-1);
+            line-height: 1.4;
+            animation: item-in 0.28s ease;
+        }
+
+        @keyframes item-in {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ─── Chat ─── */
+
+        /* chatBox div — ID preserved; override original inline style cleanly */
+        #chatBox {
+            height: 200px !important;
+            border: 1px solid rgba(139, 92, 246, 0.13) !important;
+            border-radius: var(--radius-sm);
+            overflow-y: scroll;
+            padding: 12px !important;
+            background: rgba(0, 0, 0, 0.22);
+            margin-bottom: 12px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(139,92,246,0.25) transparent;
+        }
+
+        #chatBox::-webkit-scrollbar       { width: 4px; }
+        #chatBox::-webkit-scrollbar-track { background: transparent; }
+        #chatBox::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.28); border-radius: 2px; }
+
+        #chatBox p {
+            margin-bottom: 9px;
+            font-size: 0.875rem;
+            color: var(--text-2);
+            line-height: 1.5;
+        }
+
+        #chatBox p:last-child { margin-bottom: 0; }
+
+        #chatBox b {
+            color: var(--purple);
+            font-weight: 600;
+        }
+
+        /* ─── Voting ─── */
+
+        /* voteButtons div — ID preserved; buttons created dynamically by JS */
+        #voteButtons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        #voteButtons button {
+            padding: 10px 22px;
+            background: rgba(239, 68, 68, 0.07);
+            border: 1px solid rgba(239, 68, 68, 0.28);
+            border-radius: var(--radius-sm);
+            color: var(--text-1);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 600;
+            letter-spacing: 0.07em;
+            cursor: pointer;
+            transition: all 0.22s ease;
+        }
+
+        #voteButtons button:hover:not(:disabled) {
+            background: rgba(239, 68, 68, 0.16);
+            border-color: var(--red);
+            color: #fca5a5;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 18px rgba(239, 68, 68, 0.32);
+        }
+
+        #voteButtons button:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* ─── Result ─── */
+
+        /* result h2 — ID preserved */
+        #result {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: 0.09em;
+            text-align: center;
+            color: var(--amber);
+            padding: 14px 20px;
+            margin-bottom: 14px;
+            background: rgba(245, 158, 11, 0.06);
+            border: 1px solid rgba(245, 158, 11, 0.18);
+            border-radius: var(--radius-sm);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        #result:empty { display: none; }
+
+        /* ─── Mr. White section ─── */
+        .mr-white-desc {
+            font-size: 0.875rem;
+            color: var(--text-2);
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+
+        /* ─── Winner ─── */
+
+        /* winner h2 — ID preserved */
+        #winner {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: clamp(1.2rem, 4vw, 1.8rem);
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-align: center;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, var(--amber) 20%, var(--green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            padding: 22px 20px;
+            margin-top: 6px;
+            margin-bottom: 6px;
+            position: relative;
+        }
+
+        #winner:empty { display: none; }
+
+        #winner:not(:empty)::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.18);
+            border-radius: var(--radius-sm);
+            z-index: -1;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 600px) {
+            .game-header  { padding: 16px 14px 14px; margin-bottom: 20px; }
+            .card         { padding: 18px; border-radius: 16px; }
+            .reveal-grid  { grid-template-columns: 1fr; }
+            .input-action-row { flex-wrap: wrap; }
+            .input-action-row .btn { width: 100%; }
+            #voteButtons button { flex: 1 1 140px; }
+            .btn-start    { padding: 13px; }
+        }
+
+        @media (max-width: 400px) {
+            .header-logo h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- Ambient background orbs -->
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="game-wrapper">
+
+    <!-- ═══ Header ═══ -->
+    <header class="game-header">
+        <div class="header-logo">
+            <span class="logo-icon">🔍</span>
+            <h1>UNDERCOVER</h1>
+        </div>
+        <div class="header-meta">
+            <!-- ID preserved — JS: document.getElementById("roundDisplay").innerText = "Round " + round -->
+            <div id="roundDisplay">Round 1</div>
+            <!-- ID preserved — JS: document.getElementById("roomCode").innerText = "Room Code: " + data.room_id -->
+            <div id="roomCode"></div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- ═══ Lobby / Setup Card ═══ -->
+        <section class="card">
+            <div class="card-header">
+                <span class="card-icon">🕵️</span>
+                <h2 class="card-title">Agent Setup</h2>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label" for="name">Agent Name</label>
+                <!-- ID preserved -->
+                <input id="name" class="game-input" placeholder="Enter your name">
+            </div>
+
+            <div class="lobby-actions">
+                <!-- onclick preserved -->
+                <button class="btn btn-primary" onclick="createRoom()">+ Create Room</button>
+
+                <div class="divider-row">
+                    <span class="divider-label">or join existing</span>
+                </div>
+
+                <div class="join-row">
+                    <!-- ID preserved -->
+                    <input id="roomId" class="game-input" placeholder="Enter Room Code">
+                    <!-- onclick preserved -->
+                    <button class="btn btn-secondary" onclick="joinRoom()">Join</button>
+                </div>
+            </div>
+
+            <!-- onclick preserved -->
+            <button class="btn btn-start" onclick="startGame()">▶ Start Mission</button>
+        </section>
+
+        <!-- ═══ Players Card ═══ -->
+        <section class="card">
+            <div class="card-header">
+                <span class="card-icon">👥</span>
+                <h3 class="card-title">Agents in Room</h3>
+            </div>
+            <!-- ID preserved — JS: updatePlayers() appends <li> elements here -->
+            <ul id="players"></ul>
+        </section>
+
+        <!-- ═══ Role & Word Reveal ═══ -->
+        <div class="reveal-grid">
+            <div class="card reveal-card role-reveal">
+                <div class="reveal-label">Your Role</div>
+                <!-- ID preserved — JS: document.getElementById("role").innerText = "Role: " + data.role -->
+                <h2 id="role"></h2>
+            </div>
+            <div class="card reveal-card word-reveal">
+                <div class="reveal-label">Your Word</div>
+                <!-- ID preserved — JS: document.getElementById("word").innerText = "Word: " + data.word -->
+                <h2 id="word"></h2>
+            </div>
+        </div>
+
+        <!-- ═══ Clue Card ═══ -->
+        <section class="card">
+            <div class="card-header">
+                <span class="card-icon">💡</span>
+                <h3 class="card-title">Give Your Clue</h3>
+            </div>
+            <div class="input-action-row">
+                <!-- ID preserved -->
+                <input id="clueInput" class="game-input" placeholder="Enter your clue…">
+                <!-- onclick preserved -->
+                <button class="btn btn-accent" onclick="submitClue()">Submit</button>
+            </div>
+            <hr class="clues-divider">
+            <h4 class="subsection-title">All Clues This Round</h4>
+            <!-- ID preserved — JS: new_clue event appends <li> elements here -->
+            <ul id="clues"></ul>
+        </section>
+
+        <!-- ═══ Discussion Chat ═══ -->
+        <section class="card">
+            <div class="card-header">
+                <span class="card-icon">💬</span>
+                <h3 class="card-title">Discussion</h3>
+            </div>
+            <!-- ID preserved — JS: new_message event appends <p> here -->
+            <!-- height/overflow managed via CSS using !important to override original inline style if present -->
+            <div id="chatBox"></div>
+            <div class="input-action-row">
+                <!-- ID preserved -->
+                <input id="messageInput" class="game-input" placeholder="Type your message…">
+                <!-- onclick preserved -->
+                <button class="btn btn-accent" onclick="sendMessage()">Send</button>
+            </div>
+        </section>
+
+        <!-- ═══ Voting Card ═══ -->
+        <section class="card">
+            <div class="card-header">
+                <span class="card-icon">🗳️</span>
+                <h3 class="card-title">Vote to Eliminate</h3>
+            </div>
+            <!-- ID preserved — JS: updatePlayers() creates <button> elements here -->
+            <div id="voteButtons"></div>
+        </section>
+
+        <!-- ═══ Result Display ═══ -->
+        <!-- ID preserved — JS: sets innerText for eliminations, ties, results -->
+        <h2 id="result"></h2>
+
+        <!-- ═══ Mr. White Guess Section ═══ -->
+        <!-- ID preserved — JS: toggles style.display between "block" and "none" -->
+        <div id="mrWhiteGuessSection" style="display:none;">
+            <section class="card">
+                <div class="card-header">
+                    <span class="card-icon">🃏</span>
+                    <h3 class="card-title">Mr. White — Final Guess</h3>
+                </div>
+                <p class="mr-white-desc">You've been unmasked! Guess the secret word correctly to steal the win.</p>
+                <div class="input-action-row">
+                    <!-- ID preserved -->
+                    <input id="mrWhiteGuessInput" class="game-input" placeholder="What is the secret word?">
+                    <!-- onclick preserved -->
+                    <button class="btn btn-danger" onclick="guessWord()">Guess</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- ═══ Winner Display ═══ -->
+        <!-- ID preserved — JS: sets innerText with winner announcement -->
+        <h2 id="winner"></h2>
+
+    </div><!-- /container -->
+</div><!-- /game-wrapper -->
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<script>
+
+const socket = io();
+
+let currentRoom = "";
+let hasVoted = false;
+let isEliminated = false;
+let myName = "";
+socket.on("room_created",(data)=>{
+
+    currentRoom=data.room_id;
+
+    document.getElementById(
+        "roomCode"
+    ).innerText=
+    "Room Code: "+data.room_id;
+
+    updatePlayers(data.players);
+
+});
+
+socket.on("room_update",(players)=>{
+
+    updatePlayers(players);
+
+});
+
+socket.on("game_started",(data)=>{
+
+    document.getElementById(
+        "role"
+    ).innerText=
+    "Role: "+data.role;
+
+    if(data.role === "Mr. White"){
+
+    document.getElementById(
+        "word"
+    ).innerText =
+    "You have no word";
+
+}
+else{
+
+    document.getElementById(
+        "word"
+    ).innerText =
+        "Word: " + data.word;
+
+}
+});
+
+socket.on("new_clue",(item)=>{
+
+    const list =
+        document.getElementById(
+            "clues"
+        );
+
+    const li =
+        document.createElement(
+            "li"
+        );
+
+    li.innerText =
+        item.player +
+        ": " +
+        item.clue;
+
+    list.appendChild(li);
+
+});
+socket.on(
+"discussion_started",
+()=>{
+
+    alert(
+        "All clues submitted. Discussion phase started."
+    );
+
+});
+socket.on(
+"new_message",
+(data)=>{
+
+    const chat =
+        document.getElementById(
+            "chatBox"
+        );
+
+    chat.innerHTML +=
+        "<p><b>" +
+        data.player +
+        ":</b> " +
+        data.message +
+        "</p>";
+
+});
+
+socket.on(
+"player_eliminated",
+(player)=>{
+
+    document.getElementById(
+        "result"
+    ).innerText =
+    player +
+    " was eliminated";
+
+    if(player === myName){
+
+    isEliminated = true;
+
+    document
+        .querySelectorAll(
+            "#voteButtons button"
+        )
+        .forEach(button=>{
+
+            button.disabled = true;
+
+        });
+    
+    document.getElementById(
+        "clueInput"
+    ).disabled = true;
+
+    document.querySelector(
+        "button[onclick='submitClue()']"
+    ).disabled = true;
+    }
+});
+    
+
+
+
+    socket.on(
+"winner",
+(result)=>{
+
+    document.getElementById(
+        "winner"
+    ).innerText =
+    result;
+
+    document.getElementById(
+        "mrWhiteGuessSection"
+    ).style.display = "none";
+
+});
+
+
+socket.on(
+"error_message",
+(msg)=>{
+
+    alert(msg);
+
+});
+socket.on(
+"new_round",
+()=>{
+
+    hasVoted = false;
+
+    document.getElementById(
+        "clues"
+    ).innerHTML = "";
+
+    document.getElementById(
+        "clueInput"
+    ).value = "";
+
+    if(!isEliminated){
+
+        document
+            .querySelectorAll(
+                "#voteButtons button"
+            )
+            .forEach(button=>{
+
+                button.disabled = false;
+
+                if(
+                    button.innerText ===
+                    "Voted"
+                ){
+                    button.innerText =
+                    button.innerText.replace(
+                        "Voted",
+                        "Vote"
+                    );
+                }
+
+            });
+
+    }
+
+});
+socket.on(
+"round_update",
+(round)=>{
+
+    document.getElementById(
+        "roundDisplay"
+    ).innerText =
+    "Round " + round;
+
+});
+socket.on(
+"your_turn",
+()=>{
+
+    alert(
+        "It's your turn to give a clue"
+    );
+
+});
+
+socket.on("mr_white_guess", () => {
+
+    document.getElementById(
+        "mrWhiteGuessArea"
+    ).style.display = "block";
+
+    alert(
+        "You are Mr. White! Guess the word."
+    );
+
+});
+socket.on(
+"result",
+(msg)=>{
+
+    document.getElementById(
+        "result"
+    ).innerText = msg;
+
+});
+function createRoom(){
+
+    const name =
+        document.getElementById(
+            "name"
+        ).value;
+
+    socket.emit(
+        "create_room",
+        {
+            name:name
+        }
+    );
+
+}
+socket.on(
+"tie_vote",
+(data)=>{
+
+    document.getElementById(
+        "result"
+    ).innerText =
+    "Tie vote between: " +
+    data.players.join(", ") +
+    ". Vote again!";
+
+    hasVoted = false;
+
+    document
+        .querySelectorAll(
+            "#voteButtons button"
+        )
+        .forEach(button=>{
+
+            if(!isEliminated){
+
+                button.disabled = false;
+
+            }
+
+        });
+
+});
+
+
+function joinRoom(){
+
+    const name =
+        document.getElementById(
+            "name"
+        ).value;
+
+    myName = name;
+
+    const roomId =
+        document.getElementById(
+            "roomId"
+        ).value;
+
+    currentRoom = roomId;
+
+    socket.emit(
+        "join_room",
+        {
+            name:name,
+            room_id:roomId
+        }
+    );
+
+}
+function startGame(){
+
+    socket.emit(
+        "start_game",
+        {
+            room_id:currentRoom
+        }
+    );
+
+}
+
+function submitClue(){
+
+    if(isEliminated){
+
+        alert(
+            "You have been eliminated"
+        );
+
+        return;
+
+    }
+
+    const clue =
+        document.getElementById(
+            "clueInput"
+        ).value;
+
+    socket.emit(
+        "submit_clue",
+        {
+            room_id:currentRoom,
+            clue:clue
+        }
+    );
+
+}
+function sendMessage(){
+
+    const msg =
+        document.getElementById(
+            "messageInput"
+        ).value;
+
+    socket.emit(
+        "send_message",
+        {
+            room_id: currentRoom,
+            message: msg
+        }
+    );
+
+    document.getElementById(
+        "messageInput"
+    ).value = "";
+}
+
+
+function votePlayer(){
+
+    const player =
+        document.getElementById(
+            "votePlayer"
+        ).value;
+
+    socket.emit(
+        "vote",
+        {
+            room_id:currentRoom,
+            player:player
+        }
+    );
+
+}
+
+function updatePlayers(players){
+
+    const list =
+        document.getElementById(
+            "players"
+        );
+
+    list.innerHTML = "";
+
+    players.forEach(player=>{
+
+        const li =
+            document.createElement(
+                "li"
+            );
+
+        li.innerText =
+            player.name;
+
+        list.appendChild(li);
+
+    });
+
+    const voteArea =
+        document.getElementById(
+            "voteButtons"
+        );
+
+    voteArea.innerHTML = "";
+
+    players.forEach(player=>{
+
+    
+
+    const btn =
+        document.createElement(
+            "button"
+        );
+
+    btn.innerText =
+        "Vote " + player.name;
+        btn.onclick = function(){
+            console.log("Voting for:", player);
+
+    if(hasVoted || isEliminated){
+
+        return;
+
+    }
+
+    socket.emit(
+        "vote",
+        {
+            room_id: currentRoom,
+            player: player.name
+        }
+    );
+
+    hasVoted = true;
+
+    document
+        .querySelectorAll(
+            "#voteButtons button"
+        )
+        .forEach(button => {
+
+            button.disabled = true;
+
+        });
+
+    btn.innerText = "Voted";
+
+};
+
+        voteArea.appendChild(btn);
+
+    });
+};
+
+
+function guessWord(){
+
+    const guess =
+    document.getElementById(
+        "mrWhiteGuessInput"
+    ).value;
+
+    if(
+        guess.trim() === ""
+    ){
+
+        alert(
+            "You must guess a word"
+        );
+
+        return;
+    }
+
+    socket.emit(
+        "guess_word",
+        {
+            room_id: currentRoom,
+            guess: guess
+        }
+    );
+
+}
+
+</script>
+
+</body>
+</html>
