@@ -157,3 +157,16 @@ http://127.0.0.1:5000
 Engineering Student | AI Enthusiast | Backend Developer
 
 GitHub: https://github.com/sarvaniperecharla-coder
+## Screenshots
+
+### Lobby Screen
+
+![Lobby Screen](screenshots/lobby.png)
+
+### Gameplay
+
+![Roleplay](screenshots/roleplay.png)
+
+### Winner Screen
+
+![Winner Screen](screenshots/winner.png)
