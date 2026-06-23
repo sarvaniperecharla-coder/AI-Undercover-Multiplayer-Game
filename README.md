@@ -163,9 +163,9 @@ GitHub: https://github.com/sarvaniperecharla-coder
 
 ![Lobby Screen](lobby.png)
 
-### Gameplay
+### Role Screen
 
-![Roleplay](screenshots/roleplay.png)
+![Role Screen](role.png)
 
 ### Winner Screen
 
