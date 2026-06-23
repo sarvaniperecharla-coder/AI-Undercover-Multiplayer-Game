@@ -161,7 +161,7 @@ GitHub: https://github.com/sarvaniperecharla-coder
 
 ### Lobby Screen
 
-![Lobby Screen](screenshots/lobby.png)
+![Lobby Screen](lobby.png)
 
 ### Gameplay
 
