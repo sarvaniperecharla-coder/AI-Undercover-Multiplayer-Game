@@ -167,6 +167,6 @@ GitHub: https://github.com/sarvaniperecharla-coder
 
 ![Role Screen](role.png)
 
-### Winner Screen
+### Vote Screen
 
-![Winner Screen](screenshots/winner.png)
+![Vote Screen](vote.png)
